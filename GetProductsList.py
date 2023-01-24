@@ -2,9 +2,10 @@ import sys
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from pprint import pp
 import openpyxl
 
+start_pos = 4
+browser = webdriver.Chrome()
 
 def product_attr_2_ref(attr: str):
     return f"https://www.dns-shop.ru/product/{attr[:8]}{attr[9:13]}{attr[31:35]}"
@@ -47,7 +48,6 @@ def get_page_products(soup: BeautifulSoup):
 
 
 def get_products_from_catalog_ref(href: str):
-    browser = webdriver.Chrome()
     browser.get(href)
     html = browser.page_source
     soup = BeautifulSoup(html, 'lxml')
@@ -63,7 +63,7 @@ def write_urls(workbook, sheet_name, data):
     wb = openpyxl.load_workbook(workbook)
     sheet = wb[sheet_name]
 
-    free_row = 4
+    free_row = start_pos
     while sheet[f"B{free_row}"].value is not None:
         free_row += 1
         if free_row > 5000:
