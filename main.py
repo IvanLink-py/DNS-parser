@@ -3,7 +3,10 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from pprint import pp
 
-url = 'https://www.dns-shop.ru/product/790d362c7e3e3330/processor-amd-a6-9500e-oem/'
+
+def product_attr_2_ref(attr: str):
+    return f"https://www.dns-shop.ru/product/{attr[:8]}{attr[9:13]}{attr[31:35]}"
+
 
 catalog_pages = {
     "CPU": [
@@ -38,8 +41,8 @@ catalog_pages = {
 }
 
 browser = webdriver.Chrome()
-browser.get(url)
+browser.get(catalog_pages["GPU"][0])
 html = browser.page_source
 soup = BeautifulSoup(html, 'lxml')
 
-pp(list([i.text for i in soup.find_all(class_="product-characteristics__group")]))
+pp(list([(i['data-product'], product_attr_2_ref(i['data-product'])) for i in soup.find_all(class_="catalog-product")]))
