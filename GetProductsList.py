@@ -1,3 +1,5 @@
+import sys
+
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from pprint import pp
@@ -61,7 +63,7 @@ def write_urls(workbook, sheet_name, data):
     wb = openpyxl.load_workbook(workbook)
     sheet = wb[sheet_name]
 
-    free_row = 2
+    free_row = 4
     while sheet[f"B{free_row}"].value is not None:
         free_row += 1
         if free_row > 5000:
@@ -74,6 +76,23 @@ def write_urls(workbook, sheet_name, data):
     wb.save(filename=workbook)
 
 
+def main(limit=-1, start=0):
+    for cat in list(catalog_pages.keys()):
+        for cat_page_ref in catalog_pages[cat]:
+
+            if start == 0:
+
+                data = get_products_from_catalog_ref(cat_page_ref)
+                write_urls("Export.xlsx", "Export", data)
+                print(f"{limit} - {cat_page_ref}")
+
+            else:
+                start -= 1
+
+            limit -= 1
+            if limit == 0:
+                sys.exit(0)
+
+
 if __name__ == '__main__':
-    # pp(list(get_products_from_catalog_ref(catalog_pages["CPU"][0])))
-    write_urls("Export.xlsx", "Export", get_products_from_catalog_ref(catalog_pages["CPU"][0]))
+    main()
