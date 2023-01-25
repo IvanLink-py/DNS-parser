@@ -53,6 +53,10 @@ def get_products_from_catalog_ref(href: str):
     soup = BeautifulSoup(html, 'lxml')
 
     products_data = get_page_products(soup)
+    if len(products_data) == 0:
+        products_data = get_page_products(soup)
+        print('None')
+
     return map(lambda t:
                (product_attr_2_ref(t[0]),
                 t[1].find_next(class_='catalog-product__name').text),
@@ -61,7 +65,11 @@ def get_products_from_catalog_ref(href: str):
 
 def write_urls(workbook, sheet_name, data):
     wb = openpyxl.load_workbook(workbook)
-    sheet = wb[sheet_name]
+
+    try:
+        sheet = wb[sheet_name]
+    except KeyError:
+        sheet = wb.create_sheet(sheet_name)
 
     free_row = start_pos
     while sheet[f"B{free_row}"].value is not None:
@@ -83,7 +91,7 @@ def main(limit=-1, start=0):
             if start == 0:
 
                 data = get_products_from_catalog_ref(cat_page_ref)
-                write_urls("Export.xlsx", "Export", data)
+                write_urls("Export.xlsx", cat, data)
                 print(f"{limit} - {cat_page_ref}")
 
             else:
@@ -95,4 +103,4 @@ def main(limit=-1, start=0):
 
 
 if __name__ == '__main__':
-    main()
+    main(start=75)

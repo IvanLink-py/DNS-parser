@@ -1,24 +1,32 @@
 from bs4 import BeautifulSoup
 import openpyxl
-from GetProductsList import start_pos, browser
+from GetProductsList import start_pos, catalog_pages
+from GetProductsList import browser
+from pprint import pp
 
 
-def get_ref(workbook, sheet_name):
+def get_ref_by_cat(workbook, cat):
     start = start_pos
-    index = 0
+
+    refs_by_cats = []
 
     wb = openpyxl.load_workbook(workbook, read_only=True)
-    sheet = wb[sheet_name]
+
+    index = 0
+
+    sheet = wb[cat]
 
     while True:
-        value = sheet.cell(column=2, row=start+index).value
+        value = sheet.cell(column=2, row=start + index).value
 
-        # if value is None:
-        #     return
+        if value is None:
+            break
 
-        yield index, value
+        refs_by_cats.append((start + index, value))
 
         index += 1
+
+    return refs_by_cats
 
 
 def get_details_by_ref(ref):
@@ -28,16 +36,19 @@ def get_details_by_ref(ref):
 
     specs = {}
 
-    for spec in soup.find_all(class_="product-characteristics__spec"):
-        spec_name = spec.find_next(class_="product-characteristics__spec-title").text.strip()
-        spec_val = spec.find_next(class_="product-characteristics__spec-value").text.strip()
+    try:
+        for spec in soup.find_all(class_="product-characteristics__spec"):
+            spec_name = spec.find_next(class_="product-characteristics__spec-title").text.strip()
+            spec_val = spec.find_next(class_="product-characteristics__spec-value").text.strip()
 
-        specs[spec_name] = spec_val
+            specs[spec_name] = spec_val
+    except AttributeError:
+        return {}
 
     return specs
 
 
-def write_details(workbook, sheet_name, index, details):
+def write_details(workbook, sheet_name, row, details):
     def get_spec_column(shet, spec_):
         i = 4
         while True:
@@ -49,12 +60,9 @@ def write_details(workbook, sheet_name, index, details):
             if i > 5000:
                 raise GeneratorExit()
 
-    start = start_pos
-
     wb = openpyxl.load_workbook(workbook)
     sheet = wb[sheet_name]
 
-    row = start + index
     for spec in details:
         column = get_spec_column(sheet, spec)
 
@@ -65,26 +73,29 @@ def write_details(workbook, sheet_name, index, details):
 
 
 def main():
-    skip = 313
-    gen = get_ref("Export.xlsx", "Export")
-    while True:
-        if skip <= 0:
-            try:
-                i, ref = gen.__next__()
+    skip = 34
+    for cat in catalog_pages:
+        refs = get_ref_by_cat("Export.xlsx", cat)
+        for row, ref in refs:
+
+            if skip > 0:
+                print(cat, row, f'Skip {skip}')
+                skip -= 1
+                continue
+
+            specs = get_details_by_ref(ref)
+            repeat = 0
+            while specs == {} and repeat < 5:
                 specs = get_details_by_ref(ref)
-                print(i, ref, specs)
-                write_details("Export.xlsx", "Export", i, specs)
-            except StopIteration:
-                print('StopIteration')
-                break
-            except KeyboardInterrupt:
-                print('KeyboardInterrupt')
-                break
-            except:
-                print(skip)
-        else:
-            gen.__next__()
-            skip -= 1
+                repeat += 1
+
+            if specs == {}:
+                print(cat, row, 'Error')
+                continue
+
+            write_details("Export.xlsx", cat, row, specs)
+
+            print(cat, row, ref, specs)
 
 
 if __name__ == '__main__':
